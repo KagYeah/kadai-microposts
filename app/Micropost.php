@@ -13,6 +13,6 @@ class Micropost extends Model
      */
     public function user()
     {
-        return $this->belongsTO(User::class);
+        return $this->belongsTo(User::class);
     }
 }
