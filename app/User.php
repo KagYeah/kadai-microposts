@@ -62,11 +62,19 @@ class User extends Authenticatable
     }
     
     /**
+     * このユーザがfavoriteしているmicropost。（Micropostモデルとの関係を定義）
+     */
+    public function favorites()
+    {
+        return $this->belongsToMany(Micropost::class, 'favorites', 'user_id', 'micropost_id')->withTimestamps();
+    }
+    
+    /**
      * このユーザーに関係するモデルの件数をロード
      */
     public function loadRelationshipCounts()
     {
-        $this->loadCount(['microposts', 'followings', 'followers']);
+        $this->loadCount(['microposts', 'followings', 'followers', 'favorites']);
     }
     
     /**
@@ -88,6 +96,12 @@ class User extends Authenticatable
         }
     }
     
+    /**
+     * $userIdで指定されたユーザをアンフォローする。
+     * 
+     * @param  int $usereId
+     * @return bool
+     */
     public function unfollow($userId)
     {
         $exist = $this->is_following($userId);
@@ -121,5 +135,49 @@ class User extends Authenticatable
         $userIds[] = $this->id;
         
         return Micropost::whereIn('user_id', $userIds);
+    }
+    
+    /**
+     * $postIdで指定された投稿をfavoriteする。
+     * 
+     * @param  int $postId
+     * @return bool
+     */
+    public function favorite($postId)
+    {
+        if ($this->is_favoriting($postId)) {
+            return false;
+        } else {
+            $this->favorites()->attach($postId);
+            return true;
+        }
+    }
+    
+    /**
+     * $postIdで指定された投稿をunfavoriteする。
+     * 
+     * @param  int $postId
+     * @return bool
+     */
+    public function unfavorite($postId)
+    {
+        if ($this->is_favoriting($postId)) {
+            $this->favorites()->detach($postId);
+            return true;
+        } else {
+            return false;
+        }
+    }
+    
+    public function is_favoriting($postId)
+    {
+        return $this->favorites()->where('micropost_id', $postId)->exists();
+    }
+    
+    public function favorite_microposts()
+    {
+        $postIds = $this->favorites()->pluck('microposts.id')->toArray();
+        
+        return Micropost::whereIn('micropost_id', $postIds);
     }
 }
